@@ -4,11 +4,12 @@ import datetime
 import logging
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ConversationHandler, MessageHandler, filters  #, Updater
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup #,ReplyKeyboardMarkup, ReplyKeyboardRemove, Bot
+from keyboards import *
 #import random
 #import re
 
-logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
-logger = logging.getLogger(__name__)
+# logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
+# logger = logging.getLogger(__name__)
 
 aboba = ""   # (\/)(ಠ_ಠ)(\/)
 STAGE = 0
@@ -16,81 +17,15 @@ STAGE = 0
 MULTYPLIER_PAGES = 10
 
 
-def first_keyboard():
-    keyboard = [
-        [
-            InlineKeyboardButton("Категории", callback_data="1"),
-            InlineKeyboardButton("Расходы за n дней", callback_data="2"),
-            InlineKeyboardButton("Удалить расходы", callback_data="3")
-        ]
-    ]
-
-    reply_markup = InlineKeyboardMarkup(keyboard)
-
-    return reply_markup
 
 
-def categories_keyboard():
-    categories_dict = opener_for_categories_keyboard()
-    keyboard = []
-    keyboard_add = {
-        "Добавить категорию": "add",
-        "Удалить категорию": "dell",
-        "Назад": "back"
-    }
-
-    for i in categories_dict.items():
-        keyboard.append([InlineKeyboardButton(i[0], callback_data=i[1])])
-
-    for x in keyboard_add.items():
-        keyboard.append([InlineKeyboardButton(x[0], callback_data=x[1])])
-
-    '''keyboard = [ # Примерно так выглядит эта переменная 
-            [InlineKeyboardButton("Аренда жилья", callback_data="Аренда жилья")],
-            [InlineKeyboardButton("Еда", callback_data="Еда")],
-            [InlineKeyboardButton("Комуналка", callback_data="Комуналка")],
-            [InlineKeyboardButton("Такси", callback_data="Такси")],
-            [InlineKeyboardButton("Мобильный интернет", callback_data="Мобильный интернет")],
-            [InlineKeyboardButton("Прочее", callback_data="Прочее")],
-            [InlineKeyboardButton("Назад", callback_data="back")]
-    ]'''
-
-    reply_markup = InlineKeyboardMarkup(keyboard)
-
-    return reply_markup
-
-
-def opener_for_categories_keyboard():
-    d = {}
-
-    with open('categories.csv', 'r', encoding='utf-8') as f:
-        reader = csv.reader(f)
-        for row in reader:
-            d.setdefault(row[0], row[0])
-    return d
-
-
-def category_data_entry():
-    keyboard = [
-        [InlineKeyboardButton("Ввести сумму", callback_data="1")],
-        [InlineKeyboardButton("Отмена", callback_data="cancel")]
-    ]
-
-    reply_markup = InlineKeyboardMarkup(keyboard)
-
-    return reply_markup
-
-async def start(update: Update, context) -> None:
+async def start(update: Update, context):
     user = update.message.from_user
     first_name = update.message.chat.first_name
 
-    context.user_data["name"] = first_name
-    context.user_data['len'] = 0
-    # await update.message.reply_text(f'Hello {update.effective_user.first_name}')
-
     if user.id in [1137442897, 890981069, 5260146834]:
-        per_month = cost_for_calculation(extractor_for_calculation(days_list_generator_for_calc(30)))
 
+        per_month = cost_for_calculation(extractor_for_calculation(days_list_generator_for_calc(30)))
         per_week = cost_for_calculation(extractor_for_calculation(days_list_generator_for_calc(7)))
 
         if not per_month:
@@ -121,215 +56,118 @@ async def start(update: Update, context) -> None:
             await update.message.reply_text(
                 f"Расходы за последние 30 дней составили:\n\n{''.join(show_objects)}\nИ суммарно выходит {summ} лари.")
 
-        await update.message.reply_text("Выберете раздел", reply_markup=first_keyboard())
+        await update.message.reply_text("Выберете раздел", reply_markup=startup_markup)
 
         return STAGE + 1
 
 
-# def start(update, context):
-#
-#     user = update.message.from_user
-#
-#     first_name = update.message.chat.first_name
-#     context.user_data["name"] = first_name
-#     context.user_data['len'] = 0
-#
-#     if user.id in [1137442897, 890981069, 5260146834]:
-#         # days_generator = days_list_generator_for_calc(30)
-#         # ext = extractor_for_calculation(days_generator)
-#         # keys = cost_for_calculation(ext)
-#
-#         per_month = cost_for_calculation(extractor_for_calculation(days_list_generator_for_calc(30)))
-#
-#         per_week = cost_for_calculation(extractor_for_calculation(days_list_generator_for_calc(7)))
-#         # print(days_generator)
-#         # print(ext)
-#         # print(keys)
-#         if not per_month:
-#
-#             update.message.reply_text(f"Привет {first_name}, приятно познакомиться с тобой!")
-#
-#         elif per_month and not per_week:
-#
-#             update.message.reply_text(f"Привет {first_name}!")
-#
-#             summ = sum(per_month.values())
-#             show_objects = [x + " : " + str(y) + "\n" for x, y in per_month.items()]
-#
-#             update.message.reply_text(
-#                 f"Расходы за последние 30 дней составили:\n\n{''.join(show_objects)}\nИ суммарно выходит {summ} лари.")
-#
-#         else:
-#
-#             update.message.reply_text(f"Привет {first_name}!")
-#
-#             summ = sum(per_week.values())
-#             show_objects = [x + " : " + str(y) + "\n" for x, y in per_week.items()]
-#             update.message.reply_text(
-#                 f"Расходы за последние 7 дней составили:\n\n{''.join(show_objects)}\nИ суммарно выходит {summ} лари.")
-#
-#             summ = sum(per_month.values())
-#             show_objects = [x + " : " + str(y) + "\n" for x, y in per_month.items()]
-#             update.message.reply_text(
-#                 f"Расходы за последние 30 дней составили:\n\n{''.join(show_objects)}\nИ суммарно выходит {summ} лари.")
-#
-#         update.message.reply_text("Выберете раздел", reply_markup=first_keyboard())
-#
-#         return STAGE + 1
+
 
 
 async def categories(update, context):
     query = update.callback_query
+
     await query.answer()
-    await query.edit_message_text("Выберете катигорию", reply_markup=categories_keyboard())
+    await query.edit_message_text("Выберете категорию", reply_markup=categories_markup)
     return STAGE + 2
 
 
-async def add_value(update, context):
-    global aboba
-
-    categories_dict = opener_for_categories_keyboard()
+async def append_category(update, context):
     query = update.callback_query
     await query.answer()
-
-    for key, value in categories_dict.items():
-        if value == query.data:
-            aboba += value
-
-    await query.edit_message_text(f"Выберете кнопку для {query.data.lower()}", reply_markup=category_data_entry())
-    return STAGE + 3
-
-
-async def entry_of_expenses(update, context):
-    query = update.callback_query
-    await query.answer()
-    await query.edit_message_text("Введите расходы")
-    return STAGE + 4
-
-
-async def add_categories(update, context):
-    query = update.callback_query
-    await query.answer()
-
-    button = [
-        [InlineKeyboardButton("Назад", callback_data="cancel")]
-    ]
-    reply_markup = InlineKeyboardMarkup(button)
-
-    await query.edit_message_text("Введите название категории.", reply_markup=reply_markup)
+    await query.edit_message_text("Введите название категории.", reply_markup=cancel_markup)
     return STAGE + 5
 
 
 async def writer_categories(update, context):
+
     message = str(update.message.text)
 
     with open('categories.csv', 'a', encoding='utf-8') as f:
         f.write(message + '\n')
 
-    await update.message.reply_text("Категория успешно добавленна, выберете раздел", reply_markup=first_keyboard())
+    global categories_markup
+
+    categories_markup['inline_keyboard'].insert(0, [InlineKeyboardButton(message, callback_data=message)])
+
+    await update.message.reply_text("Категория успешно добавленна, выберете раздел", reply_markup=startup_markup)
     return STAGE + 1
 
 
 async def remove_categories(update, context):
     query = update.callback_query
+
+    delete_categories_markup = InlineKeyboardMarkup(
+        inline_categories_extractor() +
+        [
+            [InlineKeyboardButton("Назад", callback_data="back")],
+        ]
+    )
+
     await query.answer()
-    # Это говнище должно выводить все категории виде кнопок
-    buttons = opener_for_categories_keyboard()
-
-    keyboard = [[InlineKeyboardButton(x[0], callback_data=x[1])] for x in buttons.items()]
-    keyboard.append([InlineKeyboardButton("Назад", callback_data="cancel")])
-    reply_markup = InlineKeyboardMarkup(keyboard)
-
-    await query.edit_message_text("Выберете категорию для её удаления.", reply_markup=reply_markup)
+    await query.edit_message_text("Выберете категорию для её удаления.", reply_markup=delete_categories_markup)
     return STAGE + 6
 
 
 async def deleter_categories(update, context):
     query = update.callback_query
     await query.answer()
+    with open("categories.csv", "r", encoding='utf-8') as f:
+        lines = f.readlines()
+    with open("categories.csv", "w", encoding='utf-8') as f:
+        for line in lines:
+            if line.strip("\n") != query.data:
+                f.write(line)
 
-    categories_dict = opener_for_categories_keyboard()
+    global categories_markup
 
-    with open('categories.csv', 'w', encoding='utf-8') as f:
-        for i in categories_dict:
-            if not query.data == i:
-                f.write(i + '\n')
 
-    await query.edit_message_text("Категория успешно удаленна, выберете раздел", reply_markup=first_keyboard())
+    categories_markup['inline_keyboard'].remove([InlineKeyboardButton(query.data, callback_data=query.data)])
+
+    await query.edit_message_text("Категория успешно удаленна, выберете раздел", reply_markup=startup_markup)
     return STAGE + 1
 
 
-async def entry_of_days(update, context):
 
-    button = [
-        [InlineKeyboardButton("Назад", callback_data="back")]
-        #[InlineKeyboardButton("Удалить расходы", callback_data="del")]
-    ]
-    reply_markup = InlineKeyboardMarkup(button)
 
+
+async def add_value(update, context):
+    query = update.callback_query
+    context.user_data['category'] = query.data
+    await query.answer()
+    await query.edit_message_text(f"Выберете кнопку для {query.data.lower()}", reply_markup=category_data_entry_markup)
+    return STAGE + 3
+
+
+async def add_expense(update, context):
     query = update.callback_query
     await query.answer()
-    await query.edit_message_text("Введите кол-во дней для расчета", reply_markup=reply_markup)
-    return STAGE + 10
 
+    if query.data == 'add_expanse':
+        await query.edit_message_text("Введите расходы")
+        return STAGE + 3
 
-async def back(update, context):
-
-    context.user_data['list_data_objects'] = None
-    context.user_data['selected_page'] = None
-    context.user_data['selected_object'] = None
-
-    #update.callback_query.answer()
-    await update.callback_query.edit_message_text("Выберете раздел", reply_markup=first_keyboard())
-
-    #update.callback_query.message.edit_text(f"back stage", reply_markup=first_keyboard())
-    #start(update, context)
-    return STAGE + 1
-
-
-async def cancel(update, context):
-
-    await update.callback_query.edit_message_text("Выберете катигорию", reply_markup=categories_keyboard())
-
-    return STAGE + 2
-
-
-async def stop(update: Update, context):
-    """Cancels and ends the conversation."""
-    user = update.message.from_user
-    logger.info("User %s canceled the conversation.", user.first_name)
-    await update.message.reply_text(
-        'stopped',
-    )
-
-    return ConversationHandler.END
-
-
-async def writer(update, context):
-
-    global aboba
-    named_tuple = time.localtime()
-    time_string = time.strftime("%d:%m:%Y", named_tuple)
-
-    categories = aboba
-
-    if check_on_number_for_calc(update.message.text):
-
-        sum = str(update.message.text)
-
-        with open("log.csv", "a", encoding='utf-8') as file:
-            file_write = csv.writer(file, delimiter="|", lineterminator="\n")
-            file_write.writerow([categories, sum, time_string])
-
-        aboba = ""
-
-        await update.message.reply_text("Данные успешно введены", reply_markup=first_keyboard())
+    elif is_float(query.data):
+        write_row(context.user_data['category'], query.data)
+        context.user_data['category'] = None
+        await update.message.reply_text("Данные успешно введены", reply_markup=startup_markup)
         return STAGE + 1
 
     else:
 
         await update.message.reply_text("Вы должны вести число")
-        return STAGE + 4
+        return STAGE + 3
+
+
+
+
+
+async def entry_of_days(update, context):
+
+    query = update.callback_query
+    await query.answer()
+    await query.edit_message_text("Введите кол-во дней для расчета", reply_markup=cancel_markup)
+    return STAGE + 10
 
 
 async def calculation(update, context):
@@ -366,58 +204,7 @@ async def calculation(update, context):
         return STAGE + 11
 
 
-def check_on_number_for_calc(message_text):
-
-    try:
-        return float(message_text)
-    except:
-        return False
-
-
-def days_list_generator_for_calc(days_num):
-
-    dayz_list = []
-    # составление списка дат
-    for delta_day in range(int(days_num)):
-        date = datetime.date.today() - datetime.timedelta(days=delta_day)
-        dayz_list.append([date.day, date.month, date.year])
-
-    return dayz_list
-
-
-def extractor_for_calculation(dayz_list):
-
-    new_list = []
-
-    with open("log.csv", encoding="utf-8") as f:
-
-        reader = csv.DictReader(f, delimiter="|")
-        # Запись всех дней
-        for row in reader:
-            # конвертирование str из csv файла в struct object
-            s = time.strptime(row['time_string'], "%d:%m:%Y")
-            #  проверка на вхождение
-            if [s.tm_mday, s.tm_mon, s.tm_year] in dayz_list:
-                new_list.append((row['categories'], row['sum'], row['time_string']))
-
-    return new_list
-
-
-def cost_for_calculation(new_list):
-
-    g = {}
-
-    for i in new_list:  # Избавляемся от ненужных категорий и прибавляем к уже имеющимся категориям
-        if not g.get(i[0]):
-            g[i[0]] = float(i[1])
-
-        else:
-            g[i[0]] = g.get(i[0]) + float(i[1])
-
-    return g
-
-
-async def remove_expenses_1(update, context):
+async def remove_expenses(update, context):
 
     query = update.callback_query
     await query.answer()
@@ -473,75 +260,6 @@ async def remove_expenses_1(update, context):
 
     return STAGE + 11
 
-async def remove_expenses_3(update, context):  # Проблема с переключением страниц
-
-    query = update.callback_query
-    await query.answer()
-
-    show = ''
-
-    # data = context.user_data['list_data_objects']
-
-    # проверка на существование ключа selected_page
-    if not context.user_data.get('selected_page'):
-        context.user_data['selected_page'] = 0
-
-    data = context.user_data['list_data_objects']
-
-    page = context.user_data['selected_page']
-
-    mydata = context.user_data['list_data_objects'][page * MULTYPLIER_PAGES:page * MULTYPLIER_PAGES + MULTYPLIER_PAGES:]
-
-
-
-    # проверка callback'a
-    # переключение страниц с проверкой
-    if query.data == 'left_page' and context.user_data['selected_page'] > 0:
-        context.user_data['selected_page'] += 1
-
-    elif query.data == 'right_page' and len(mydata) == 10:
-        context.user_data['selected_page'] -= 1
-
-    # если в callback приходит индекс от массива всех элементов тогда добавляем элемент в user.data в ключ selected_object
-    elif query.data.isnumeric():
-        if len(context.user_data['list_data_objects']) > 0:
-            context.user_data['selected_object'].append(context.user_data['list_data_objects'][int(query.data)])
-            del context.user_data['list_data_objects'][int(query.data)]
-
-
-    # отрисовка элементов в выбранно
-    if not context.user_data.get('selected_object'):
-        context.user_data['selected_object'] = []
-    else:
-
-        for element in context.user_data['selected_object']:
-            show = show + element[0] + ', ' + element[1] + ' лари, ' + element[2] + '\n'
-
-
-    # отрисовка  кнопока
-    keyboard = []
-
-    for row in range(len(mydata)):
-        category, summ, time = data[row]
-        keyboard.append([InlineKeyboardButton(f'{category}, {summ} лари, {time}', callback_data=str(row + (page*MULTYPLIER_PAGES)))])
-
-    keyboard.append([InlineKeyboardButton('<', callback_data='left_page'),
-                     InlineKeyboardButton(f"{page}", callback_data='NOT_USED'),
-                     InlineKeyboardButton('>', callback_data='right_page')], )
-
-    if context.user_data['selected_object']:
-        keyboard.append([InlineKeyboardButton('удалить', callback_data='del_expenses')])
-
-    # KTTC вести эту хуйню выше
-    keyboard.append([InlineKeyboardButton("Назад", callback_data="back")])
-    reply_markup = InlineKeyboardMarkup(keyboard)
-
-    # проверка перед отрисовкой
-    if (query.data not in ['left_page', 'right_page'] or context.user_data['selected_page'] != page) and query.data != 'NOT_USED':
-        await update.callback_query.edit_message_text(f"выбранно \n\n {show}", reply_markup=reply_markup)
-
-    return STAGE + 11
-
 
 async def del_expenses(update, context):
     query = update.callback_query
@@ -549,10 +267,9 @@ async def del_expenses(update, context):
 
     result = select_deleter(context.user_data['selected_object'])
 
-
     if result:
         await back(update, context)
-        await update.callback_query.edit_message_text('Данные успешно удаленны', reply_markup=first_keyboard())
+        await update.callback_query.edit_message_text('Данные успешно удаленны', reply_markup=startup_markup)
     else:
         raise EOFError
 
@@ -560,6 +277,111 @@ async def del_expenses(update, context):
     context.user_data['selected_page'] = None
 
     return STAGE + 1
+
+
+
+
+
+async def back(update, context):
+
+    context.user_data['list_data_objects'] = None
+    context.user_data['selected_page'] = None
+    context.user_data['selected_object'] = None
+
+    #update.callback_query.answer()
+    await update.callback_query.edit_message_text("Выберете раздел", reply_markup=startup_markup)
+
+    #update.callback_query.message.edit_text(f"back stage", reply_markup=first_keyboard())
+    #start(update, context)
+    return STAGE + 1
+
+
+async def cancel(update, context):
+
+    await update.callback_query.edit_message_text("Выберете катигорию", reply_markup=categories_markup)
+
+    return STAGE + 2
+
+
+async def stop(update: Update, context):
+    """Cancels and ends the conversation."""
+    user = update.message.from_user
+    # logger.info("User %s canceled the conversation.", user.first_name)
+    await update.message.reply_text(
+        'stopped',
+    )
+
+    return ConversationHandler.END
+
+
+
+
+async def you_are_dick(update, context):
+    await update.message.reply_text('Ты хуй')
+
+
+
+
+
+def days_list_generator_for_calc(days_num):
+
+    dayz_list = []
+    # составление списка дат
+    for delta_day in range(int(days_num)):
+        date = datetime.date.today() - datetime.timedelta(days=delta_day)
+        dayz_list.append([date.day, date.month, date.year])
+
+    return dayz_list
+
+
+def extractor_for_calculation(dayz_list):
+
+    new_list = []
+
+    with open("log.csv", encoding="utf-8") as f:
+
+        reader = csv.DictReader(f, delimiter="|")
+        # Запись всех дней
+        for row in reader:
+            # конвертирование str из csv файла в struct object
+            s = time.strptime(row['time_string'], "%d:%m:%Y")
+            #  проверка на вхождение
+            if [s.tm_mday, s.tm_mon, s.tm_year] in dayz_list:
+                new_list.append((row['categories'], row['sum'], row['time_string']))
+
+    return new_list
+
+
+def cost_for_calculation(new_list):
+
+    g = {}
+
+    for i in new_list:  # Избавляемся от ненужных категорий и прибавляем к уже имеющимся категориям
+        if not g.get(i[0]):
+            g[i[0]] = float(i[1])
+
+        else:
+            g[i[0]] = g.get(i[0]) + float(i[1])
+
+    return g
+
+
+def write_row(category: str, sum: str, time_string=None) -> bool:
+    try:
+
+        if not time_string:
+            time_string = time.strftime("%d:%m:%Y", time.localtime())
+
+        if not isinstance(sum, str):
+            sum = str(sum)
+
+        with open("log.csv", "a", encoding='utf-8') as file:
+            file_write = csv.writer(file, delimiter="|", lineterminator="\n")
+            file_write.writerow([category, sum, time_string])
+
+        return True
+    except Exception as e:
+        raise e
 
 
 def select_deleter(selected_object):
@@ -594,55 +416,59 @@ def select_deleter(selected_object):
         return False
 
 
-async def you_are_dick(update, context):
-    await update.message.reply_text('Ты хуй')
+def check_on_number_for_calc(message_text):
+
+    try:
+        return float(message_text)
+    except:
+        return False
+
+
+def is_float(value):
+  try:
+    float(value)
+    return True
+  except:
+    return False
+
+
+
 
 
 def main():
-    TOKEN = "5323207728:AAGzOc7CZKGr0f-OPfjntqMiGCqdABC_x_E"
-    # create the updater, that will automatically create also a dispatcher and a queue to
-    # make them dialoge
-    # updater = Updater(TOKEN, use_context=True)
-    application = ApplicationBuilder().token(TOKEN).build()
 
+    TOKEN = "5323207728:AAGzOc7CZKGr0f-OPfjntqMiGCqdABC_x_E"
+
+    application = ApplicationBuilder().token(TOKEN).build()
 
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)],
         states={
-            # GENDER: [MessageHandler(Filters.regex('^(Boy|Girl|Other)$'), gender)],
             STAGE + 1: [
-                # CallbackQueryHandler(button_stage1),
-                # CommandHandler('start', start)
+
                 CallbackQueryHandler(categories, pattern="1"),
                 CallbackQueryHandler(entry_of_days, pattern="2"),
                 CommandHandler("dick", you_are_dick)
-                # CallbackQueryHandler(two, pattern="^" + str(TWO) + "$"),
-                # CallbackQueryHandler(three, pattern="^" + str(THREE) + "$"),
-                # CallbackQueryHandler(four, pattern="^" + str(FOUR) + "$"),
             ],
             STAGE + 2: [
                 CallbackQueryHandler(back, pattern="back"),
-                CallbackQueryHandler(add_categories, pattern="add"),
+                CallbackQueryHandler(append_category, pattern="add"),
                 CallbackQueryHandler(remove_categories, pattern="dell"),
                 CallbackQueryHandler(add_value)
-                # CallbackQueryHandler(back, pattern="back")
             ],
             STAGE + 3: [
-                CallbackQueryHandler(entry_of_expenses, pattern="1"),
-                CallbackQueryHandler(cancel, pattern="cancel")
-            ],
-            STAGE + 4: [
-                MessageHandler(filters.TEXT, writer)
+                MessageHandler(filters.TEXT, add_expense),
+                CallbackQueryHandler(cancel, pattern="back")
+
             ],
             STAGE + 5: [
-                CallbackQueryHandler(cancel, pattern="cancel"),
+                CallbackQueryHandler(cancel, pattern="back"),
                 MessageHandler(filters.TEXT, writer_categories)
             ],
             STAGE + 6: [
-                CallbackQueryHandler(cancel, pattern="cancel"),
+                CallbackQueryHandler(cancel, pattern="back"),
                 CallbackQueryHandler(deleter_categories)
             ],
-            # Расходы за n дней
             STAGE + 10: [
                 CallbackQueryHandler(back, pattern="back"),
                 MessageHandler(filters.TEXT, calculation)
@@ -650,7 +476,7 @@ def main():
             STAGE + 11: [
                 CallbackQueryHandler(back, pattern="back"),
                 CallbackQueryHandler(del_expenses, pattern="del_expenses"),
-                CallbackQueryHandler(remove_expenses_1)
+                CallbackQueryHandler(remove_expenses)
 
             ]
 
@@ -658,23 +484,9 @@ def main():
         fallbacks=[CommandHandler('stop', stop)], per_chat=False
     )
 
-
-
-    # dispatcher = updater.dispatcher
-    # add handlers for start and help commands
-    # application.add_handler(conv_handler)
-
-    # application.add_handler(CommandHandler("start", start))
-
-
-
-
     application.add_handler(conv_handler)
-    # dispatcher.add_handler(CallbackQueryHandler(button_stage1))
-    # start your shiny new bot
     application.run_polling()
-    # run the bot until Ctrl-C
-    # updater.idle()
+
 
 
 if __name__ == '__main__':
