@@ -30,7 +30,7 @@ startup_markup = InlineKeyboardMarkup(
         [
             InlineKeyboardButton("Категории", callback_data="1"),
             InlineKeyboardButton("Расходы за n дней", callback_data="2"),
-            InlineKeyboardButton("Удалить расходы", callback_data="3")
+            #InlineKeyboardButton("Удалить расходы", callback_data="3")
         ]
     ]
 )

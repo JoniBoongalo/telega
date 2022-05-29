@@ -3,7 +3,7 @@ import time
 import datetime
 import logging
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ConversationHandler, MessageHandler, filters  #, Updater
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup #,ReplyKeyboardMarkup, ReplyKeyboardRemove, Bot
+from telegram import Update, Bot, InlineKeyboardButton, InlineKeyboardMarkup #,ReplyKeyboardMarkup, ReplyKeyboardRemove, Bot
 from keyboards import *
 #import random
 #import re
@@ -34,32 +34,56 @@ async def start(update: Update, context):
 
         elif per_month and not per_week:
 
-            await update.message.reply_text(f"Привет {first_name}!")
-
-            summ = sum(per_month.values())
-            show_objects = [x + " : " + str(y) + "\n" for x, y in per_month.items()]
+            objects_per_month = [x + " : " + str(y) + "\n" for x, y in per_month.items()]
 
             await update.message.reply_text(
-                f"Расходы за последние 30 дней составили:\n\n{''.join(show_objects)}\nИ суммарно выходит {summ} лари.")
+                f"Расходы за последние 30 дней составили:\n\n{''.join(objects_per_month)}\nИ суммарно выходит {sum(per_month.values())} лари.")
 
         else:
 
-            await update.message.reply_text(f"Привет {first_name}!")
-
-            summ = sum(per_week.values())
-            show_objects = [x + " : " + str(y) + "\n" for x, y in per_week.items()]
+            objects_per_week = [x + " : " + str(y) + "\n" for x, y in per_week.items()]
+            objects_per_month = [x + " : " + str(y) + "\n" for x, y in per_month.items()]
             await update.message.reply_text(
-                f"Расходы за последние 7 дней составили:\n\n{''.join(show_objects)}\nИ суммарно выходит {summ} лари.")
-
-            summ = sum(per_month.values())
-            show_objects = [x + " : " + str(y) + "\n" for x, y in per_month.items()]
-            await update.message.reply_text(
-                f"Расходы за последние 30 дней составили:\n\n{''.join(show_objects)}\nИ суммарно выходит {summ} лари.")
+                f"Расходы за последние 7 дней составили:\n\n{''.join(objects_per_week)}\nИ суммарно выходит {sum(per_week.values())} лари.\n\n" +
+                '-----------------------------------------\n\n' +
+                f"Расходы за последние 30 дней составили:\n\n{''.join(objects_per_month)}\nИ суммарно выходит {sum(per_month.values())} лари.")
 
         await update.message.reply_text("Выберете раздел", reply_markup=startup_markup)
 
         return STAGE + 1
 
+
+
+async def show_statistic(update: Update, context):
+
+
+
+    per_month = cost_for_calculation(extractor_for_calculation(days_list_generator_for_calc(30)))
+    per_week = cost_for_calculation(extractor_for_calculation(days_list_generator_for_calc(7)))
+
+    if not per_month:
+
+        pass
+
+    elif per_month and not per_week:
+
+        objects_per_month = [x + " : " + str(y) + "\n" for x, y in per_month.items()]
+
+        await update.message.reply_text(
+            f"Расходы за последние 30 дней составили:\n\n{''.join(objects_per_month)}\nИ суммарно выходит {sum(per_month.values())} лари.")
+
+    else:
+
+        objects_per_week = [x + " : " + str(y) + "\n" for x, y in per_week.items()]
+        objects_per_month = [x + " : " + str(y) + "\n" for x, y in per_month.items()]
+        await update.message.reply_text(
+            f"Расходы за последние 7 дней составили:\n\n{''.join(objects_per_week)}\nИ суммарно выходит {sum(per_week.values())} лари.\n\n" +
+            '-----------------------------------------\n\n' +
+            f"Расходы за последние 30 дней составили:\n\n{''.join(objects_per_month)}\nИ суммарно выходит {sum(per_month.values())} лари.")
+
+    await update.message.reply_text("Выберете раздел", reply_markup=startup_markup)
+
+    return STAGE + 1
 
 
 
@@ -82,6 +106,8 @@ async def append_category(update, context):
 async def writer_categories(update, context):
 
     message = str(update.message.text)
+
+    await context.bot.delete_message(chat_id=update.message.chat.id, message_id=update.message.message_id)
 
     with open('categories.txt', 'a', encoding='utf-8') as f:
         f.write(message + '\n')
@@ -130,7 +156,6 @@ async def deleter_categories(update, context):
 
 
 
-
 async def add_value(update, context):
     query = update.callback_query
     context.user_data['category'] = query.data
@@ -142,14 +167,22 @@ async def add_value(update, context):
 async def add_expense(update, context):
     query = update.callback_query
     await query.answer()
+    # print(query.data)
+    await query.edit_message_text("Введите расходы")
+    return STAGE + 3
 
-    if query.data == 'add_expanse':
-        await query.edit_message_text("Введите расходы")
-        return STAGE + 3
 
-    elif is_float(query.data):
-        write_row(context.user_data['category'], query.data)
-        context.user_data['category'] = None
+async def asdel_expense(update, context):
+
+    text = str(update.message.text)
+
+    await context.bot.delete_message(chat_id=update.message.chat.id, message_id=update.message.message_id)
+
+    if is_float(text):
+        write_row(context.user_data['category'], text)
+        del context.user_data['category']
+
+        await context.bot.delete_message(chat_id=update.message.chat.id, message_id=update.message.message_id)
         await update.message.reply_text("Данные успешно введены", reply_markup=startup_markup)
         return STAGE + 1
 
@@ -157,7 +190,6 @@ async def add_expense(update, context):
 
         await update.message.reply_text("Вы должны вести число")
         return STAGE + 3
-
 
 
 
@@ -174,11 +206,14 @@ async def calculation(update, context):
 
     message_text = update.message.text
 
+    await context.bot.delete_message(chat_id=update.message.chat.id, message_id=update.message.message_id)
+
     dayz = check_on_number_for_calc(message_text)
 
     if not dayz:
         await update.message.reply_text("Вы должны вести число")
         return STAGE + 10
+
     else:
         days_list = days_list_generator_for_calc(dayz)
 
@@ -457,8 +492,9 @@ def main():
                 CallbackQueryHandler(add_value)
             ],
             STAGE + 3: [
-                MessageHandler(filters.TEXT, add_expense),
-                CallbackQueryHandler(cancel, pattern="back")
+                CallbackQueryHandler(cancel, pattern="back"),
+                CallbackQueryHandler(add_expense, pattern="add_expanse"),
+                MessageHandler(filters.TEXT, asdel_expense),
 
             ],
             STAGE + 5: [
@@ -481,7 +517,7 @@ def main():
             ]
 
         },
-        fallbacks=[CommandHandler('stop', stop)], per_chat=False
+        fallbacks=[CommandHandler('stop', stop), CommandHandler('stat', show_statistic)], per_chat=False
     )
 
     application.add_handler(conv_handler)
