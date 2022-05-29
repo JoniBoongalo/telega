@@ -83,7 +83,7 @@ async def writer_categories(update, context):
 
     message = str(update.message.text)
 
-    with open('categories.csv', 'a', encoding='utf-8') as f:
+    with open('categories.txt', 'a', encoding='utf-8') as f:
         f.write(message + '\n')
 
     global categories_markup
@@ -112,9 +112,9 @@ async def remove_categories(update, context):
 async def deleter_categories(update, context):
     query = update.callback_query
     await query.answer()
-    with open("categories.csv", "r", encoding='utf-8') as f:
+    with open("categories.txt", "r", encoding='utf-8') as f:
         lines = f.readlines()
-    with open("categories.csv", "w", encoding='utf-8') as f:
+    with open("categories.txt", "w", encoding='utf-8') as f:
         for line in lines:
             if line.strip("\n") != query.data:
                 f.write(line)

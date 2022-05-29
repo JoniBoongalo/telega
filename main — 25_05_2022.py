@@ -63,7 +63,7 @@ def categories_keyboard():
 def opener_for_categories_keyboard():
     d = {}
 
-    with open('categories.csv', 'r', encoding='utf-8') as f:
+    with open('categories.txt', 'r', encoding='utf-8') as f:
         reader = csv.reader(f)
         for row in reader:
             d.setdefault(row[0], row[0])
@@ -144,7 +144,7 @@ def add_categories(update, context):
 def writer_categories(update, context):
     message = str(update.message.text)
 
-    with open('categories.csv', 'a', encoding='utf-8') as f:
+    with open('categories.txt', 'a', encoding='utf-8') as f:
         f.write(message + '\n')
 
     update.message.reply_text("Категория успешно добавленна, выберете раздел", reply_markup=first_keyboard())
@@ -171,7 +171,7 @@ def deleter_categories(update, context):
 
     categories_dict = opener_for_categories_keyboard()
 
-    with open('categories.csv', 'w', encoding='utf-8') as f:
+    with open('categories.txt', 'w', encoding='utf-8') as f:
         for i in categories_dict:
             if not query.data == i:
                 f.write(i + '\n')
