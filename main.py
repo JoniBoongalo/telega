@@ -27,7 +27,7 @@ async def start(update: Update, context):
 
         if not per_month:
 
-             await  update.message.reply_text(f"Привет {first_name}, приятно познакомиться с тобой!")
+             await update.message.reply_text(f"Привет {first_name}, приятно познакомиться с тобой!")
 
         elif per_month and not per_week:
 
@@ -257,8 +257,8 @@ async def remove_expenses(update, context):
     keyboard = []
 
     for row in range(len(mydata)):
-        category, summ, time = mydata[row]
-        keyboard.append([InlineKeyboardButton(f'{category}, {summ} лари, {time}',
+        category, summ, time, hours_and_minutes = mydata[row]
+        keyboard.append([InlineKeyboardButton(f'{category}, {summ} лари, {time}, {hours_and_minutes}',
                                               callback_data=str(row + (page * MULTYPLIER_PAGES)))])
 
     keyboard.append([InlineKeyboardButton('<', callback_data='left_page'),
@@ -356,7 +356,7 @@ def extractor_for_calculation(dayz_list):
             s = time.strptime(row['time_string'], "%d:%m:%Y")
             #  проверка на вхождение
             if [s.tm_mday, s.tm_mon, s.tm_year] in dayz_list:
-                new_list.append((row['categories'], row['sum'], row['time_string']))
+                new_list.append((row['categories'], row['sum'], row['time_string'], row['hours_and_minutes']))
 
     return new_list
 
@@ -375,18 +375,21 @@ def cost_for_calculation(new_list):
     return g
 
 
-def write_row(category: str, sum: str, time_string=None) -> bool:   # Нужно добавить время(часы и минуты)
+def write_row(category: str, sum: str, time_string=None, hours_and_minutes=None) -> bool:   # Нужно добавить время(часы и минуты)
     try:
 
         if not time_string:
             time_string = time.strftime("%d:%m:%Y", time.localtime())
+
+        if not hours_and_minutes:
+            hours_and_minutes = time.strftime("%H:%M", time.localtime())
 
         if not isinstance(sum, str):
             sum = str(sum)
 
         with open("log.csv", "a", encoding='utf-8') as file:
             file_write = csv.writer(file, delimiter="|", lineterminator="\n")
-            file_write.writerow([category, sum, time_string])
+            file_write.writerow([category, sum, time_string, hours_and_minutes])
 
         return True
     except Exception as e:
@@ -402,11 +405,11 @@ def select_deleter(selected_object):
         with open("log.csv", encoding="utf-8") as f:
             reader = csv.DictReader(f, delimiter="|")
             for row in reader:
-                log_csv.append((row['categories'], row['sum'], row['time_string']))
+                log_csv.append((row['categories'], row['sum'], row['time_string'], row['hours_and_minutes']))
 
         with open("log.csv", "w", encoding="utf-8") as f:
             writer = csv.writer(f, delimiter="|", lineterminator="\n")
-            writer.writerow(('categories', 'sum', 'time_string'))
+            writer.writerow(('categories', 'sum', 'time_string', 'hours_and_minutes'))
             for line in log_csv:
                 if line not in selected_object:
                     writer.writerow(line)
@@ -434,16 +437,22 @@ def check_on_number_for_calc(message_text):
 
 
 def is_float(value):
-  try:
-    float(value)
-    return True
-  except:
-    return False
+    try:
+        float(value)
+        return True
+    except:
+        return False
+
+
+def open_the_token():
+    with open('Token.txt', 'r', encoding='utf-8') as f:
+        token = f.readline()
+    return token
 
 
 def main():
 
-    TOKEN = "5323207728:AAGzOc7CZKGr0f-OPfjntqMiGCqdABC_x_E"
+    TOKEN = open_the_token()
 
     application = ApplicationBuilder().token(TOKEN).build()
 
@@ -451,7 +460,6 @@ def main():
         entry_points=[CommandHandler('start', start)],
         states={
             STAGE + 1: [
-
                 CallbackQueryHandler(categories, pattern="1"),
                 CallbackQueryHandler(entry_of_days, pattern="2"),
                 CommandHandler("dick", you_are_dick)
@@ -493,7 +501,6 @@ def main():
 
     application.add_handler(conv_handler)
     application.run_polling()
-
 
 
 if __name__ == '__main__':
