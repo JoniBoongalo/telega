@@ -168,7 +168,7 @@ async def add_expense(update, context):
     query = update.callback_query
     await query.answer()
     # print(query.data)
-    await query.edit_message_text("Введите расходы")
+    await query.edit_message_text("Введите расходы", reply_markup=cancel_markup)
     return STAGE + 3
 
 
@@ -176,19 +176,16 @@ async def asdel_expense(update, context):
 
     text = str(update.message.text)
 
-    await context.bot.delete_message(chat_id=update.message.chat.id, message_id=update.message.message_id)
-
     if is_float(text):
         write_row(context.user_data['category'], text)
         del context.user_data['category']
-
         await context.bot.delete_message(chat_id=update.message.chat.id, message_id=update.message.message_id)
         await update.message.reply_text("Данные успешно введены", reply_markup=startup_markup)
         return STAGE + 1
 
     else:
-
-        await update.message.reply_text("Вы должны вести число")
+        await context.bot.delete_message(chat_id=update.message.chat.id, message_id=update.message.message_id)
+        await update.message.reply_text("Вы должны вести число", reply_markup=cancel_markup)
         return STAGE + 3
 
 

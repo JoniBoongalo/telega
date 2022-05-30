@@ -48,4 +48,3 @@ cancel_markup = InlineKeyboardMarkup(
     ]
 )
 
-print(categories_markup)
