@@ -5,7 +5,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 def inline_categories_extractor():
     category_list = []
 
-    with open('categories.txt', 'r', encoding='utf-8') as f:
+    with open('categories.txt', 'r', encoding='utf-8') as f:   # Не спрашивай, так надо xD
         reader = csv.reader(f)
         for row in reader:
             category_list.append([InlineKeyboardButton(row[0], callback_data=row[0])])

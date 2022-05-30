@@ -1,9 +1,8 @@
-import csv
 import time
 import datetime
-import logging
+# import logging
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ConversationHandler, MessageHandler, filters  #, Updater
-from telegram import Update, Bot, InlineKeyboardButton, InlineKeyboardMarkup #,ReplyKeyboardMarkup, ReplyKeyboardRemove, Bot
+from telegram import Update #, Bot, InlineKeyboardButton, InlineKeyboardMarkup #,ReplyKeyboardMarkup, ReplyKeyboardRemove, Bot
 from keyboards import *
 #import random
 #import re
@@ -11,12 +10,10 @@ from keyboards import *
 # logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 # logger = logging.getLogger(__name__)
 
-aboba = ""   # (\/)(ಠ_ಠ)(\/)
+# aboba = ""   # (\/)(ಠ_ಠ)(\/)
 STAGE = 0
 
 MULTYPLIER_PAGES = 10
-
-
 
 
 async def start(update: Update, context):
@@ -53,10 +50,7 @@ async def start(update: Update, context):
         return STAGE + 1
 
 
-
 async def show_statistic(update: Update, context):
-
-
 
     per_month = cost_for_calculation(extractor_for_calculation(days_list_generator_for_calc(30)))
     per_week = cost_for_calculation(extractor_for_calculation(days_list_generator_for_calc(7)))
@@ -84,8 +78,6 @@ async def show_statistic(update: Update, context):
     await update.message.reply_text("Выберете раздел", reply_markup=startup_markup)
 
     return STAGE + 1
-
-
 
 
 async def categories(update, context):
@@ -147,13 +139,10 @@ async def deleter_categories(update, context):
 
     global categories_markup
 
-
     categories_markup['inline_keyboard'].remove([InlineKeyboardButton(query.data, callback_data=query.data)])
 
     await query.edit_message_text("Категория успешно удаленна, выберете раздел", reply_markup=startup_markup)
     return STAGE + 1
-
-
 
 
 async def add_value(update, context):
@@ -189,8 +178,6 @@ async def asdel_expense(update, context):
         return STAGE + 3
 
 
-
-
 async def entry_of_days(update, context):
 
     query = update.callback_query
@@ -220,10 +207,8 @@ async def calculation(update, context):
 
         all_cost = cost_for_calculation(list_data_objects)
 
-
         summ = sum(all_cost.values())
         show_objects = [x + " : " + str(y) + "\n\n" for x, y in all_cost.items()]
-
 
         button = [
             [InlineKeyboardButton("Назад", callback_data="back")],
@@ -311,9 +296,6 @@ async def del_expenses(update, context):
     return STAGE + 1
 
 
-
-
-
 async def back(update, context):
 
     context.user_data['list_data_objects'] = None
@@ -346,13 +328,8 @@ async def stop(update: Update, context):
     return ConversationHandler.END
 
 
-
-
 async def you_are_dick(update, context):
     await update.message.reply_text('Ты хуй')
-
-
-
 
 
 def days_list_generator_for_calc(days_num):
@@ -398,7 +375,7 @@ def cost_for_calculation(new_list):
     return g
 
 
-def write_row(category: str, sum: str, time_string=None) -> bool:
+def write_row(category: str, sum: str, time_string=None) -> bool:   # Нужно добавить время(часы и минуты)
     try:
 
         if not time_string:
@@ -462,9 +439,6 @@ def is_float(value):
     return True
   except:
     return False
-
-
-
 
 
 def main():
