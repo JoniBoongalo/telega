@@ -4,8 +4,9 @@ import datetime
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ConversationHandler, MessageHandler, filters  #, Updater
 from telegram import Update #, Bot, InlineKeyboardButton, InlineKeyboardMarkup #,ReplyKeyboardMarkup, ReplyKeyboardRemove, Bot
 from keyboards import *
-#import random
-#import re
+from config import *
+# import random
+# import re
 
 # logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 # logger = logging.getLogger(__name__)
@@ -17,67 +18,38 @@ MULTYPLIER_PAGES = 10
 
 
 async def start(update: Update, context):
-    user = update.message.from_user
-    first_name = update.message.chat.first_name
 
-    if user.id in [1137442897, 890981069, 5260146834]:
+    if update.message.from_user.id in [1137442897, 890981069, 5260146834]:
 
         per_month = cost_for_calculation(extractor_for_calculation(days_list_generator_for_calc(30)))
         per_week = cost_for_calculation(extractor_for_calculation(days_list_generator_for_calc(7)))
 
         if not per_month:
 
-             await update.message.reply_text(f"Привет {first_name}, приятно познакомиться с тобой!")
+             text = f"Привет {update.message.chat.first_name}, приятно познакомиться с тобой!"
 
         elif per_month and not per_week:
 
             objects_per_month = [x + " : " + str(y) + "\n" for x, y in per_month.items()]
 
-            await update.message.reply_text(
-                f"Расходы за последние 30 дней составили:\n\n{''.join(objects_per_month)}\nИ суммарно выходит {sum(per_month.values())} лари.")
+            text = f"Расходы за последние 30 дней составили:\n\n{''.join(objects_per_month)}\nИ суммарно выходит {sum(per_month.values())} лари."
 
         else:
 
             objects_per_week = [x + " : " + str(y) + "\n" for x, y in per_week.items()]
             objects_per_month = [x + " : " + str(y) + "\n" for x, y in per_month.items()]
-            await update.message.reply_text(
-                f"Расходы за последние 7 дней составили:\n\n{''.join(objects_per_week)}\nИ суммарно выходит {sum(per_week.values())} лари.\n\n" +
-                '-----------------------------------------\n\n' +
-                f"Расходы за последние 30 дней составили:\n\n{''.join(objects_per_month)}\nИ суммарно выходит {sum(per_month.values())} лари.")
+            text = (
+                    f"Расходы за последние 7 дней составили:\n\n{''.join(objects_per_week)}\nИ суммарно выходит {sum(per_week.values())} лари.\n\n" +
+                    '-----------------------------------------\n\n' +
+                    f"Расходы за последние 30 дней составили:\n\n{''.join(objects_per_month)}\nИ суммарно выходит {sum(per_month.values())} лари.\n\n" +
+                    '-----------------------------------------\n\n'
+                    )
 
-        await update.message.reply_text("Выберете раздел", reply_markup=startup_markup)
+
+        await update.message.reply_text(f"{text}Выберете раздел", reply_markup=startup_markup)
 
         return STAGE + 1
 
-
-async def show_statistic(update: Update, context):
-
-    per_month = cost_for_calculation(extractor_for_calculation(days_list_generator_for_calc(30)))
-    per_week = cost_for_calculation(extractor_for_calculation(days_list_generator_for_calc(7)))
-
-    if not per_month:
-
-        pass
-
-    elif per_month and not per_week:
-
-        objects_per_month = [x + " : " + str(y) + "\n" for x, y in per_month.items()]
-
-        await update.message.reply_text(
-            f"Расходы за последние 30 дней составили:\n\n{''.join(objects_per_month)}\nИ суммарно выходит {sum(per_month.values())} лари.")
-
-    else:
-
-        objects_per_week = [x + " : " + str(y) + "\n" for x, y in per_week.items()]
-        objects_per_month = [x + " : " + str(y) + "\n" for x, y in per_month.items()]
-        await update.message.reply_text(
-            f"Расходы за последние 7 дней составили:\n\n{''.join(objects_per_week)}\nИ суммарно выходит {sum(per_week.values())} лари.\n\n" +
-            '-----------------------------------------\n\n' +
-            f"Расходы за последние 30 дней составили:\n\n{''.join(objects_per_month)}\nИ суммарно выходит {sum(per_month.values())} лари.")
-
-    await update.message.reply_text("Выберете раздел", reply_markup=startup_markup)
-
-    return STAGE + 1
 
 
 async def categories(update, context):
@@ -90,6 +62,7 @@ async def categories(update, context):
 
 async def append_category(update, context):
     query = update.callback_query
+    context.user_data['bot_message_id'] = query.message.message_id
     await query.answer()
     await query.edit_message_text("Введите название категории.", reply_markup=cancel_markup)
     return STAGE + 5
@@ -108,7 +81,11 @@ async def writer_categories(update, context):
 
     categories_markup['inline_keyboard'].insert(0, [InlineKeyboardButton(message, callback_data=message)])
 
-    await update.message.reply_text("Категория успешно добавленна, выберете раздел", reply_markup=startup_markup)
+    await context.bot.edit_message_text("Категория успешно добавленна, выберете раздел", chat_id=update.message.chat.id,
+                                        message_id=context.user_data['bot_message_id'], reply_markup=startup_markup)
+
+    context.user_data['bot_message_id'] = None
+
     return STAGE + 1
 
 
@@ -148,6 +125,7 @@ async def deleter_categories(update, context):
 async def add_value(update, context):
     query = update.callback_query
     context.user_data['category'] = query.data
+    context.user_data['bot_message_id'] = query.message.message_id
     await query.answer()
     await query.edit_message_text(f"Выберете кнопку для {query.data.lower()}", reply_markup=category_data_entry_markup)
     return STAGE + 3
@@ -155,6 +133,7 @@ async def add_value(update, context):
 
 async def add_expense(update, context):
     query = update.callback_query
+    # context.user_data['bot_message_id'] = query.message.message_id
     await query.answer()
     # print(query.data)
     await query.edit_message_text("Введите расходы", reply_markup=cancel_markup)
@@ -169,36 +148,45 @@ async def asdel_expense(update, context):
         write_row(context.user_data['category'], text)
         del context.user_data['category']
         await context.bot.delete_message(chat_id=update.message.chat.id, message_id=update.message.message_id)
-        await update.message.reply_text("Данные успешно введены", reply_markup=startup_markup)
+        await context.bot.edit_message_text("Данные успешно введены", chat_id=update.message.chat.id,
+                                            message_id=context.user_data['bot_message_id'], reply_markup=startup_markup)
+
+        context.user_data['bot_message_id'] = None
+
         return STAGE + 1
 
     else:
-        await context.bot.delete_message(chat_id=update.message.chat.id, message_id=update.message.message_id)
-        await update.message.reply_text("Вы должны вести число", reply_markup=cancel_markup)
-        return STAGE + 3
+        try:
+            await context.bot.delete_message(chat_id=update.message.chat.id, message_id=update.message.message_id)
+            await context.bot.edit_message_text("Вы должны вести число", chat_id=update.message.chat.id,
+                                                message_id=context.user_data['bot_message_id'], reply_markup=cancel_markup)
+        finally:
+            return STAGE + 3
 
 
 async def entry_of_days(update, context):
-
     query = update.callback_query
+    context.user_data['bot_message_id'] = query.message.message_id
     await query.answer()
     await query.edit_message_text("Введите кол-во дней для расчета", reply_markup=cancel_markup)
     return STAGE + 10
 
 
 async def calculation(update, context):
-
-    message_text = update.message.text
-
+    dayz = update.message.text
     await context.bot.delete_message(chat_id=update.message.chat.id, message_id=update.message.message_id)
 
-    dayz = check_on_number_for_calc(message_text)
-
-    if not dayz:
-        await update.message.reply_text("Вы должны вести число")
-        return STAGE + 10
+    if not dayz.isdigit():
+        try:
+            await context.bot.edit_message_text("Вы должны вести число", chat_id=update.message.chat.id,
+                                                message_id=context.user_data['bot_message_id'], reply_markup=cancel_markup)
+        finally:
+            return STAGE + 10
 
     else:
+
+        dayz = int(dayz)
+
         days_list = days_list_generator_for_calc(dayz)
 
         list_data_objects = extractor_for_calculation(days_list)
@@ -212,13 +200,18 @@ async def calculation(update, context):
 
         button = [
             [InlineKeyboardButton("Назад", callback_data="back")],
-            [InlineKeyboardButton(f"Удалить расходы за {int(dayz)} дней", callback_data="delete")]
+            [InlineKeyboardButton(f"Удалить расходы за {dayz} дней", callback_data="delete")]
         ]
         reply_markup = InlineKeyboardMarkup(button)
 
-        await update.message.reply_text(f"Расход за {int(dayz)} дней составил:\n\n{''.join(show_objects)}Что суммарно выходит {summ} лари.",
-                                  reply_markup=reply_markup)
-        return STAGE + 11
+        await context.bot.edit_message_text(
+            f"Расход за {dayz} дней составил:\n\n{''.join(show_objects)}Что суммарно выходит {summ} лари.",
+            chat_id=update.message.chat.id, message_id=context.user_data['bot_message_id'], reply_markup=reply_markup
+        )
+
+        context.user_data['bot_message_id'] = None
+
+    return STAGE + 11
 
 
 async def remove_expenses(update, context):
@@ -266,9 +259,8 @@ async def remove_expenses(update, context):
                      InlineKeyboardButton('>', callback_data='right_page')], )
 
     if context.user_data['selected_object']:
-        keyboard.append([InlineKeyboardButton('удалить', callback_data='del_expenses')])
+        keyboard.append([InlineKeyboardButton('Удалить', callback_data='del_expenses')])
 
-    # KTTC вести эту хуйню выше
     keyboard.append([InlineKeyboardButton("Назад", callback_data="back")])
     reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -301,6 +293,7 @@ async def back(update, context):
     context.user_data['list_data_objects'] = None
     context.user_data['selected_page'] = None
     context.user_data['selected_object'] = None
+    context.user_data['bot_message_id'] = None
 
     #update.callback_query.answer()
     await update.callback_query.edit_message_text("Выберете раздел", reply_markup=startup_markup)
@@ -311,6 +304,8 @@ async def back(update, context):
 
 
 async def cancel(update, context):
+
+    context.user_data['bot_message_id'] = None
 
     await update.callback_query.edit_message_text("Выберете катигорию", reply_markup=categories_markup)
 
@@ -375,7 +370,7 @@ def cost_for_calculation(new_list):
     return g
 
 
-def write_row(category: str, sum: str, time_string=None, hours_and_minutes=None) -> bool:   # Нужно добавить время(часы и минуты)
+def write_row(category: str, sum: str, time_string=None, hours_and_minutes=None) -> bool:
     try:
 
         if not time_string:
@@ -428,14 +423,6 @@ def select_deleter(selected_object):
         return False
 
 
-def check_on_number_for_calc(message_text):
-
-    try:
-        return float(message_text)
-    except:
-        return False
-
-
 def is_float(value):
     try:
         float(value)
@@ -444,15 +431,7 @@ def is_float(value):
         return False
 
 
-def open_the_token():
-    with open('Token.txt', 'r', encoding='utf-8') as f:
-        token = f.readline()
-    return token
-
-
 def main():
-
-    TOKEN = open_the_token()
 
     application = ApplicationBuilder().token(TOKEN).build()
 
@@ -468,7 +447,7 @@ def main():
                 CallbackQueryHandler(back, pattern="back"),
                 CallbackQueryHandler(append_category, pattern="add"),
                 CallbackQueryHandler(remove_categories, pattern="dell"),
-                CallbackQueryHandler(add_value)
+                CallbackQueryHandler(add_value)  # Нужна проверка на дебила
             ],
             STAGE + 3: [
                 CallbackQueryHandler(cancel, pattern="back"),
@@ -496,7 +475,7 @@ def main():
             ]
 
         },
-        fallbacks=[CommandHandler('stop', stop), CommandHandler('stat', show_statistic)], per_chat=False
+        fallbacks=[CommandHandler('stop', stop)], per_chat=True, allow_reentry=True
     )
 
     application.add_handler(conv_handler)
