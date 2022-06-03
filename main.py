@@ -6,7 +6,7 @@ from telegram import Update #, Bot, InlineKeyboardButton, InlineKeyboardMarkup #
 from keyboards import *
 from config import *
 # import random
-# import re
+import re
 
 # logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 # logger = logging.getLogger(__name__)
@@ -16,11 +16,18 @@ STAGE = 0
 
 MULTYPLIER_PAGES = 10
 
+CATEGORIES = []
+
+with open("categories.txt", "r", encoding='utf-8') as f:
+    for line in f:
+        CATEGORIES.append(line.replace('\n', '').lower())
+# print(CATEGORIES)
+
 
 async def start(update: Update, context):
-
+    # print(update.message.message_id)
+    # print(update.message)
     if update.message.from_user.id in [1137442897, 890981069, 5260146834]:
-
         per_month = cost_for_calculation(extractor_for_calculation(days_list_generator_for_calc(30)))
         per_week = cost_for_calculation(extractor_for_calculation(days_list_generator_for_calc(7)))
 
@@ -44,12 +51,11 @@ async def start(update: Update, context):
                     f"Расходы за последние 30 дней составили:\n\n{''.join(objects_per_month)}\nИ суммарно выходит {sum(per_month.values())} лари.\n\n" +
                     '-----------------------------------------\n\n'
                     )
+        # update.inline_query()
+        message = await update.message.reply_text(f"{text}Выберете раздел", reply_markup=startup_markup)
 
-
-        await update.message.reply_text(f"{text}Выберете раздел", reply_markup=startup_markup)
-
+        context.user_data['bot_message_id'] = message.message_id
         return STAGE + 1
-
 
 
 async def categories(update, context):
@@ -62,7 +68,7 @@ async def categories(update, context):
 
 async def append_category(update, context):
     query = update.callback_query
-    context.user_data['bot_message_id'] = query.message.message_id
+    # context.user_data['bot_message_id'] = query.message.message_id
     await query.answer()
     await query.edit_message_text("Введите название категории.", reply_markup=cancel_markup)
     return STAGE + 5
@@ -71,11 +77,13 @@ async def append_category(update, context):
 async def writer_categories(update, context):
 
     message = str(update.message.text)
+    CATEGORIES.append(message.lower())
 
     await context.bot.delete_message(chat_id=update.message.chat.id, message_id=update.message.message_id)
 
     with open('categories.txt', 'a', encoding='utf-8') as f:
         f.write(message + '\n')
+
 
     global categories_markup
 
@@ -84,7 +92,6 @@ async def writer_categories(update, context):
     await context.bot.edit_message_text("Категория успешно добавленна, выберете раздел", chat_id=update.message.chat.id,
                                         message_id=context.user_data['bot_message_id'], reply_markup=startup_markup)
 
-    context.user_data['bot_message_id'] = None
 
     return STAGE + 1
 
@@ -105,6 +112,7 @@ async def remove_categories(update, context):
 
 
 async def deleter_categories(update, context):
+    CATEGORIES.remove(update.message.text.lower())
     query = update.callback_query
     await query.answer()
     with open("categories.txt", "r", encoding='utf-8') as f:
@@ -133,7 +141,7 @@ async def add_value(update, context):
 
 async def add_expense(update, context):
     query = update.callback_query
-    # context.user_data['bot_message_id'] = query.message.message_id
+    context.user_data['bot_message_id'] = query.message.message_id
     await query.answer()
     # print(query.data)
     await query.edit_message_text("Введите расходы", reply_markup=cancel_markup)
@@ -142,26 +150,54 @@ async def add_expense(update, context):
 
 async def asdel_expense(update, context):
 
-    text = str(update.message.text)
+    text = update.message.text
 
-    if is_float(text):
-        write_row(context.user_data['category'], text)
-        del context.user_data['category']
-        await context.bot.delete_message(chat_id=update.message.chat.id, message_id=update.message.message_id)
-        await context.bot.edit_message_text("Данные успешно введены", chat_id=update.message.chat.id,
-                                            message_id=context.user_data['bot_message_id'], reply_markup=startup_markup)
+    if context.user_data.get('category'):
 
-        context.user_data['bot_message_id'] = None
+        if is_float(text):
+            write_row(context.user_data['category'], text)
+            del context.user_data['category']
+            await context.bot.delete_message(chat_id=update.message.chat.id, message_id=update.message.message_id)
+            await context.bot.edit_message_text("Данные успешно введены", chat_id=update.message.chat.id,
+                                                message_id=context.user_data['bot_message_id'], reply_markup=startup_markup)
 
-        return STAGE + 1
+            return STAGE + 1
+
+        else:
+            try:
+                await context.bot.delete_message(chat_id=update.message.chat.id, message_id=update.message.message_id)
+                await context.bot.edit_message_text("Вы должны вести число", chat_id=update.message.chat.id,
+                                                    message_id=context.user_data['bot_message_id'], reply_markup=cancel_markup)
+            finally:
+                return STAGE + 3
 
     else:
-        try:
-            await context.bot.delete_message(chat_id=update.message.chat.id, message_id=update.message.message_id)
-            await context.bot.edit_message_text("Вы должны вести число", chat_id=update.message.chat.id,
-                                                message_id=context.user_data['bot_message_id'], reply_markup=cancel_markup)
-        finally:
-            return STAGE + 3
+
+        await context.bot.delete_message(chat_id=update.message.chat.id, message_id=update.message.message_id)
+        print(text)
+        category = ''
+        number = ''
+
+        mylist = text.split()
+        if len(mylist) == 2:
+            for element in mylist:
+                if is_float(element):
+                    number = element
+                elif element.lower() in CATEGORIES:
+                    category = element
+
+        if number and category:
+            x = write_row(category.title(), number)
+            if x:
+                await context.bot.edit_message_text("Данные успешно введены",  message_id=context.user_data['bot_message_id'], chat_id=update.message.chat.id,
+                                                    reply_markup=startup_markup)
+                return STAGE + 1
+
+
+
+
+
+
 
 
 async def entry_of_days(update, context):
@@ -208,8 +244,6 @@ async def calculation(update, context):
             f"Расход за {dayz} дней составил:\n\n{''.join(show_objects)}Что суммарно выходит {summ} лари.",
             chat_id=update.message.chat.id, message_id=context.user_data['bot_message_id'], reply_markup=reply_markup
         )
-
-        context.user_data['bot_message_id'] = None
 
     return STAGE + 11
 
@@ -293,7 +327,6 @@ async def back(update, context):
     context.user_data['list_data_objects'] = None
     context.user_data['selected_page'] = None
     context.user_data['selected_object'] = None
-    context.user_data['bot_message_id'] = None
 
     #update.callback_query.answer()
     await update.callback_query.edit_message_text("Выберете раздел", reply_markup=startup_markup)
@@ -304,8 +337,6 @@ async def back(update, context):
 
 
 async def cancel(update, context):
-
-    context.user_data['bot_message_id'] = None
 
     await update.callback_query.edit_message_text("Выберете катигорию", reply_markup=categories_markup)
 
@@ -423,6 +454,10 @@ def select_deleter(selected_object):
         return False
 
 
+async def aboba():
+    print(123)
+
+
 def is_float(value):
     try:
         float(value)
@@ -441,13 +476,14 @@ def main():
             STAGE + 1: [
                 CallbackQueryHandler(categories, pattern="1"),
                 CallbackQueryHandler(entry_of_days, pattern="2"),
-                CommandHandler("dick", you_are_dick)
+                CommandHandler("dick", you_are_dick),
+                MessageHandler(filters.TEXT, asdel_expense)
             ],
             STAGE + 2: [
                 CallbackQueryHandler(back, pattern="back"),
                 CallbackQueryHandler(append_category, pattern="add"),
                 CallbackQueryHandler(remove_categories, pattern="dell"),
-                CallbackQueryHandler(add_value)  # Нужна проверка на дебила
+                CallbackQueryHandler(add_value)
             ],
             STAGE + 3: [
                 CallbackQueryHandler(cancel, pattern="back"),
@@ -475,7 +511,7 @@ def main():
             ]
 
         },
-        fallbacks=[CommandHandler('stop', stop)], per_chat=True, allow_reentry=True
+        fallbacks=[CommandHandler('stop', stop), MessageHandler(filters.TEXT, asdel_expense)], per_chat=True, allow_reentry=True
     )
 
     application.add_handler(conv_handler)
