@@ -6,22 +6,16 @@ from telegram import Update #, Bot, InlineKeyboardButton, InlineKeyboardMarkup #
 from keyboards import *
 from config import *
 # import random
-import re
+# import re
 
 # logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 # logger = logging.getLogger(__name__)
 
-# aboba = ""   # (\/)(ಠ_ಠ)(\/)
 STAGE = 0
 
 MULTYPLIER_PAGES = 10
 
-CATEGORIES = []
-
-with open("categories.txt", "r", encoding='utf-8') as f:
-    for line in f:
-        CATEGORIES.append(line.replace('\n', '').lower())
-# print(CATEGORIES)
+CATEGORIES = categories_extractor()  # Функция находится в config.py
 
 
 async def start(update: Update, context):
@@ -55,6 +49,7 @@ async def start(update: Update, context):
         message = await update.message.reply_text(f"{text}Выберете раздел", reply_markup=startup_markup)
 
         context.user_data['bot_message_id'] = message.message_id
+
         return STAGE + 1
 
 
@@ -76,14 +71,15 @@ async def append_category(update, context):
 
 async def writer_categories(update, context):
 
-    message = str(update.message.text)
-    CATEGORIES.append(message.lower())
+    message = update.message.text.title()
 
     await context.bot.delete_message(chat_id=update.message.chat.id, message_id=update.message.message_id)
 
     with open('categories.txt', 'a', encoding='utf-8') as f:
         f.write(message + '\n')
 
+    global CATEGORIES
+    CATEGORIES = categories_extractor()
 
     global categories_markup
 
@@ -91,7 +87,6 @@ async def writer_categories(update, context):
 
     await context.bot.edit_message_text("Категория успешно добавленна, выберете раздел", chat_id=update.message.chat.id,
                                         message_id=context.user_data['bot_message_id'], reply_markup=startup_markup)
-
 
     return STAGE + 1
 
@@ -112,7 +107,6 @@ async def remove_categories(update, context):
 
 
 async def deleter_categories(update, context):
-    CATEGORIES.remove(update.message.text.lower())
     query = update.callback_query
     await query.answer()
     with open("categories.txt", "r", encoding='utf-8') as f:
@@ -121,6 +115,9 @@ async def deleter_categories(update, context):
         for line in lines:
             if line.strip("\n") != query.data:
                 f.write(line)
+
+    global CATEGORIES
+    CATEGORIES = categories_extractor()
 
     global categories_markup
 
@@ -150,6 +147,8 @@ async def add_expense(update, context):
 
 async def asdel_expense(update, context):
 
+    await context.bot.delete_message(chat_id=update.message.chat.id, message_id=update.message.message_id)
+
     text = update.message.text
 
     if context.user_data.get('category'):
@@ -157,15 +156,12 @@ async def asdel_expense(update, context):
         if is_float(text):
             write_row(context.user_data['category'], text)
             del context.user_data['category']
-            await context.bot.delete_message(chat_id=update.message.chat.id, message_id=update.message.message_id)
             await context.bot.edit_message_text("Данные успешно введены", chat_id=update.message.chat.id,
                                                 message_id=context.user_data['bot_message_id'], reply_markup=startup_markup)
-
             return STAGE + 1
 
         else:
             try:
-                await context.bot.delete_message(chat_id=update.message.chat.id, message_id=update.message.message_id)
                 await context.bot.edit_message_text("Вы должны вести число", chat_id=update.message.chat.id,
                                                     message_id=context.user_data['bot_message_id'], reply_markup=cancel_markup)
             finally:
@@ -173,31 +169,21 @@ async def asdel_expense(update, context):
 
     else:
 
-        await context.bot.delete_message(chat_id=update.message.chat.id, message_id=update.message.message_id)
-        print(text)
-        category = ''
-        number = ''
+        new_log_data = message_parser(text)
 
-        mylist = text.split()
-        if len(mylist) == 2:
-            for element in mylist:
-                if is_float(element):
-                    number = element
-                elif element.lower() in CATEGORIES:
-                    category = element
-
-        if number and category:
-            x = write_row(category.title(), number)
-            if x:
-                await context.bot.edit_message_text("Данные успешно введены",  message_id=context.user_data['bot_message_id'], chat_id=update.message.chat.id,
-                                                    reply_markup=startup_markup)
+        if new_log_data:
+            try:
+                await context.bot.edit_message_text("Данные успешно введены", message_id=context.user_data['bot_message_id'],
+                                                chat_id=update.message.chat.id, reply_markup=startup_markup)
+            finally:
                 return STAGE + 1
-
-
-
-
-
-
+        else:
+            try:
+                await context.bot.edit_message_text("Категории с таким именем не существует, попробуйте снова",
+                                                message_id=context.user_data['bot_message_id'],
+                                                chat_id=update.message.chat.id, reply_markup=startup_markup)
+            finally:
+                return STAGE + 1
 
 
 async def entry_of_days(update, context):
@@ -454,8 +440,22 @@ def select_deleter(selected_object):
         return False
 
 
-async def aboba():
-    print(123)
+def message_parser(text):
+    category = ''
+    number = ''
+
+    mylist = text.split()
+    if len(mylist) == 2:
+        for element in mylist:
+            if is_float(element):
+                number = element
+            elif element.lower() in categories_extractor():
+                category = element
+            elif not element.lower() in categories_extractor():
+                return False
+
+    if number and category:
+        return write_row(category.title(), number)
 
 
 def is_float(value):
@@ -511,7 +511,7 @@ def main():
             ]
 
         },
-        fallbacks=[CommandHandler('stop', stop), MessageHandler(filters.TEXT, asdel_expense)], per_chat=True, allow_reentry=True
+        fallbacks=[CommandHandler('stop', stop), MessageHandler(filters.TEXT, asdel_expense)], per_chat=True, per_user=False, allow_reentry=True
     )
 
     application.add_handler(conv_handler)
