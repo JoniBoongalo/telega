@@ -71,7 +71,7 @@ async def append_category(update, context):
 
 async def writer_categories(update, context):
 
-    message = update.message.text.title()
+    message = update.message.text.capitalize()
 
     await context.bot.delete_message(chat_id=update.message.chat.id, message_id=update.message.message_id)
 
@@ -154,7 +154,8 @@ async def asdel_expense(update, context):
     if context.user_data.get('category'):
 
         if is_float(text):
-            write_row(context.user_data['category'], text)
+            text = round(float(text.replace(',', '.')), 2)  # Избавляемся от запятой, затем переводим строку в дробь и наконец округляем до сотых
+            write_row(context.user_data['category'], str(text))
             del context.user_data['category']
             await context.bot.edit_message_text("Данные успешно введены", chat_id=update.message.chat.id,
                                                 message_id=context.user_data['bot_message_id'], reply_markup=startup_markup)
@@ -208,6 +209,9 @@ async def calculation(update, context):
     else:
 
         dayz = int(dayz)
+
+        if dayz > 1825:
+            dayz = 1825
 
         days_list = days_list_generator_for_calc(dayz)
 
@@ -441,26 +445,34 @@ def select_deleter(selected_object):
 
 
 def message_parser(text):
-    category = ''
+    category = []
     number = ''
 
     mylist = text.split()
-    if len(mylist) == 2:
-        for element in mylist:
-            if is_float(element):
-                number = element
-            elif element.lower() in categories_extractor():
-                category = element
-            elif not element.lower() in categories_extractor():
-                return False
 
-    if number and category:
-        return write_row(category.title(), number)
+    for element in mylist:
+        if is_float(element):
+            number = element.replace(',', '.')
+        else:
+            category.append(element)
+
+    if number == '':
+        return False
+
+    category = ' '.join(category)  # Просто избавляемся от списка
+    number = round(float(number), 2)  # Переводим строку в дробное число, затем округляем до сотых
+
+    if category.lower() in categories_extractor():
+        if number and category:
+            return write_row(category.capitalize(), str(number))
+
+    elif not category.lower() in categories_extractor():
+        return False
 
 
 def is_float(value):
     try:
-        float(value)
+        float(value.replace(',', '.'))
         return True
     except:
         return False
